@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">Proven Tech Resume Writing Tips & Power Verbs | ResumeRadar</title>
+    <meta name="description" th:content="${metaDescription}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div th:replace="~{fragments/header :: navbar}"></div>
+
+    <main class="container container-narrow" style="padding-top: 2.5rem; padding-bottom: 4rem;">
+        <article class="card" style="padding: 2.5rem;">
+            <span class="badge badge-teal" style="margin-bottom: 1rem;">Career Guide</span>
+            <h1>Proven Tech Resume Writing Tips &amp; Bullet Formulas</h1>
+            <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem;">
+                Transform vague task descriptions into compelling, quantifiable achievements that catch the eye of engineering hiring managers.
+            </p>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 1.5rem 0;">
+
+            <h2>The Google "XYZ" Accomplishment Formula</h2>
+            <p>
+                Senior engineering recruiters look for impact, not just job descriptions. The standard formula popularized by former Google VP of People Operations Laszlo Bock is:
+            </p>
+            <div class="card" style="background-color: var(--primary-light); border-color: #bae6fd; margin-bottom: 1.5rem; font-weight: 600; color: #0369a1;">
+                &ldquo;Accomplished [X], as measured by [Y], by doing [Z]&rdquo;
+            </div>
+
+            <h2>Eliminating Passive Weak Phrases</h2>
+            <p>
+                Recruiters scan each bullet in 3 to 6 seconds. Passive opening words immediately dilute the perceived impact of your contribution:
+            </p>
+            
+            <div class="table-wrapper" style="margin-bottom: 2rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Weak Passive Phrase</th>
+                            <th>High-Impact Action Verb</th>
+                            <th>Why It Matters</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><em>"Worked on backend API"</em></td>
+                            <td><strong>Architected &amp; Deployed RESTful API</strong></td>
+                            <td>Demonstrates ownership and end-to-end delivery</td>
+                        </tr>
+                        <tr>
+                            <td><em>"Responsible for database bugs"</em></td>
+                            <td><strong>Optimized SQL Indexing &amp; Reduced Latency</strong></td>
+                            <td>Proves measurable technical competence</td>
+                        </tr>
+                        <tr>
+                            <td><em>"Helped team with Docker"</em></td>
+                            <td><strong>Containerized Microservices Pipeline</strong></td>
+                            <td>Highlights collaboration through tangible tooling</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>How to Quantify Engineering Bullets Without Confidential Numbers</h2>
+            <p>
+                Students often feel they don't have corporate financial metrics to share. You can still quantify technical outcomes:
+            </p>
+            <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem; color: var(--text-secondary);">
+                <li><strong>Performance Metrics:</strong> "Decreased query response time from 450ms to 110ms."</li>
+                <li><strong>Scale / Volume:</strong> "Processed over 25,000 JSON events per hour during load testing."</li>
+                <li><strong>Efficiency:</strong> "Automated manual test suites, cutting regression execution from 2 hours to 8 minutes."</li>
+                <li><strong>Test Coverage:</strong> "Increased backend unit test coverage from 42% to 88% using JUnit and Mockito."</li>
+            </ul>
+
+            <h2>Continuous Improvement with ResumeRadar</h2>
+            <p>
+                Every time you refine a bullet point on ResumeRadar, our client-side engine recalculates your score and plots your progress on a version trend curve (v1 &rarr; v2 &rarr; v3). Try it now and verify your improvements in real time.
+            </p>
+
+            <div style="margin-top: 2rem; text-align: center;">
+                <a th:href="@{/register}" class="btn btn-primary btn-lg">Optimize Your Bullets Today</a>
+            </div>
+        </article>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

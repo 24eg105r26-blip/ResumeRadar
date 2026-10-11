@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">ResumeRadar — On-Device ATS Resume Scanner</title>
+    <meta name="description" th:content="${metaDescription}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div th:replace="~{fragments/header :: navbar}"></div>
+
+    <main class="container">
+        <section class="hero">
+            <span class="badge badge-teal" style="margin-bottom: 1rem;">100% On-Device &bull; Zero Server File Uploads</span>
+            <h1 class="hero-title">See Your Resume the Way an <span class="hero-highlight">ATS Recruiter</span> Does</h1>
+            <p class="hero-sub">
+                Check your resume against target job descriptions directly on your device. Instant skill gap analysis, weak bullet point rewriting, and verifiable score trends across revisions.
+            </p>
+            <div class="hero-actions">
+                <a th:href="@{/register}" class="btn btn-primary btn-lg">Start Free Scan</a>
+                <a th:href="@{/login}" class="btn btn-outline btn-lg">Sign In with Demo</a>
+            </div>
+
+            <!-- Demo Quick Access Credentials Alert -->
+            <div class="card container-narrow" style="text-align: left; background-color: var(--bg-surface-alt); margin-top: 1.5rem;">
+                <div style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    🚀 Pre-configured Demo Accounts (Instant Test Access)
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; font-size: 0.875rem;">
+                    <div>
+                        <strong>Student Account:</strong><br>
+                        Email: <code>student@resumeradar.com</code><br>
+                        Password: <code>Password123!</code>
+                    </div>
+                    <div>
+                        <strong>Mentor Account:</strong><br>
+                        Email: <code>mentor@resumeradar.com</code><br>
+                        Password: <code>Password123!</code>
+                    </div>
+                    <div>
+                        <strong>Admin Account:</strong><br>
+                        Email: <code>admin@resumeradar.com</code><br>
+                        Password: <code>AdminPassword123!</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Pillars -->
+        <section class="feature-grid">
+            <article class="card">
+                <div style="font-size: 1.75rem; margin-bottom: 0.75rem;">🔒</div>
+                <h3>Private & On-Device</h3>
+                <p>
+                    Your raw PDF or DOCX file never touches any cloud server. Document parsing and keyword extraction happen entirely inside your browser sandbox via PDF.js and Mammoth.js.
+                </p>
+            </article>
+
+            <article class="card">
+                <div style="font-size: 1.75rem; margin-bottom: 0.75rem;">🎯</div>
+                <h3>Precision Match Scoring</h3>
+                <p>
+                    Paste any target job description. ResumeRadar maps must-have engineering proficiencies and highlights both missing skills and keyword density in seconds.
+                </p>
+            </article>
+
+            <article class="card">
+                <div style="font-size: 1.75rem; margin-bottom: 0.75rem;">✍️</div>
+                <h3>Weak Bullet Rewrites</h3>
+                <p>
+                    Passive phrases like "worked on" or "responsible for" hurt recruiter interest. ResumeRadar suggests high-impact, metrics-driven action verbs using the Google XYZ formula.
+                </p>
+            </article>
+
+            <article class="card">
+                <div style="font-size: 1.75rem; margin-bottom: 0.75rem;">📈</div>
+                <h3>Measurable Version Trend</h3>
+                <p>
+                    Every adjustment creates an immutable version (v1 &rarr; v2 &rarr; v3). Track your Resume Health Score climb on an interactive trend chart as you implement suggestions.
+                </p>
+            </article>
+
+            <article class="card">
+                <div style="font-size: 1.75rem; margin-bottom: 0.75rem;">🤝</div>
+                <h3>Private Mentor Reviews</h3>
+                <p>
+                    Generate a secure share code for mentors. They see your score growth and leave actionable feedback without seeing sensitive personal resume text unless you share it.
+                </p>
+            </article>
+
+            <article class="card">
+                <div style="font-size: 1.75rem; margin-bottom: 0.75rem;">🛡️</div>
+                <h3>ATS Layout Risk Scan</h3>
+                <p>
+                    Unreadable multi-columns, images masking text, and missing section headers get flagged before you submit your application to applicant tracking systems.
+                </p>
+            </article>
+        </section>
+
+        <!-- SEO Resource Links -->
+        <section class="card" style="margin-bottom: 4rem; text-align: center; background-color: var(--primary-light); border-color: #bae6fd;">
+            <h2>Master the Technical Hiring Funnel</h2>
+            <p style="max-width: 650px; margin: 0.5rem auto 1.5rem;">
+                Browse our comprehensive editorial guides to understand automated recruiter screening systems and craft interview-winning engineering resumes.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                <a th:href="@{/guides/ats-friendly-formatting}" class="btn btn-primary">Read ATS Formatting Guide</a>
+                <a th:href="@{/guides/resume-writing-tips}" class="btn btn-teal">Read Bullet Writing Guide</a>
+            </div>
+        </section>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

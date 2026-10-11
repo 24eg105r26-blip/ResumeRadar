@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error &bull; ResumeRadar</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div th:replace="~{fragments/header :: navbar}"></div>
+
+    <main class="container container-narrow" style="padding-top: 4rem; padding-bottom: 4rem; text-align: center;">
+        <div class="card" style="padding: 3rem 2rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🛡️</div>
+            <h1 style="font-size: 1.75rem; margin-bottom: 0.5rem;" th:text="${error != null ? error : 'Request Error'}">
+                Notice
+            </h1>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;" th:text="${message != null ? message : 'An error occurred while processing your request.'}">
+                Please check the URL or return to your dashboard.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 0.75rem;">
+                <a th:href="@{/dashboard}" class="btn btn-primary">Go to Dashboard</a>
+                <a th:href="@{/}" class="btn btn-outline">Home Page</a>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

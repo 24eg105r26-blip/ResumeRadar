@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Dashboard &bull; ResumeRadar</title>
+    
+    <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
+    <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}"/>
+    
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    
+    <!-- On-Device Libraries -->
+    <script th:src="@{/vendor/pdf.min.js}"></script>
+    <script th:src="@{/vendor/mammoth.browser.min.js}"></script>
+    <script th:src="@{/js/resumeradar.js}"></script>
+</head>
+<body>
+    <div th:replace="~{fragments/header :: navbar}"></div>
+
+    <main class="container" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        
+        <!-- Top Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+            <div>
+                <h1>Resume Health Dashboard</h1>
+                <p style="color: var(--text-muted); font-size: 0.9375rem;">
+                    Private on-device ATS scan &bull; Raw resume files are never transmitted
+                </p>
+            </div>
+
+            <!-- Resume Selector & Mentor Share Code -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <form th:action="@{/dashboard}" method="get" id="projectSelectForm">
+                    <select name="resumeId" class="form-control" onchange="this.form.submit()" style="padding: 0.45rem 0.75rem; font-size: 0.875rem;">
+                        <option th:each="r : ${resumes}" 
+                                th:value="${r.id}" 
+                                th:text="${r.title}" 
+                                th:selected="${selectedResume != null && selectedResume.id == r.id}">
+                            Resume Title
+                        </option>
+                        <option th:if="${#lists.isEmpty(resumes)}" value="">No resumes yet</option>
+                    </select>
+                </form>
+
+                <button type="button" class="btn btn-outline btn-sm" onclick="resetForNewResume()">
+                    + New Resume Project
+                </button>
+
+                <!-- Mentor Share Code Button -->
+                <button type="button" class="btn btn-teal btn-sm" onclick="toggleMentorCodeModal()">
+                    🤝 Mentor Link
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification Bar -->
+        <div id="statusAlert" class="alert" style="display: none;"></div>
+
+        <!-- Mentor Code Modal / Banner -->
+        <div id="mentorCodeBanner" class="card" style="display: none; background-color: var(--teal-light); border-color: #99f6e4; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <strong style="color: #0f766e; font-size: 1rem;">Share Your Progress with a Mentor</strong>
+                    <p style="color: #115e59; font-size: 0.875rem; margin: 0.2rem 0 0;">
+                        Give this code to your mentor. They can track your score growth and leave guidance without seeing your raw resume text:
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span id="displayShareCode" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; background: #ffffff; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); border: 1px dashed var(--teal);">
+                        <span th:text="${shareCode != null ? shareCode : 'Generating...'}"></span>
+                    </span>
+                    <button type="button" class="btn btn-teal btn-sm" onclick="generateNewShareCode()">Refresh Code</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mentorCodeBanner').style.display='none'">Dismiss</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ONE-SCREEN COMMAND CENTER GRID -->
+        <div class="dashboard-grid">
+
+            <!-- 1. LEFT PANEL: Upload & On-Device Analysis Input -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">1. Upload &amp; Match Input</h2>
+                        <div class="card-subtitle">Local browser extraction &bull; zero cloud upload</div>
+                    </div>
+                    <span class="badge badge-teal">On-Device</span>
+                </div>
+
+                <!-- Resume Title -->
+                <div class="form-group">
+                    <label class="form-label" for="resumeProjectTitle">Resume Project Title</label>
+                    <input type="text" id="resumeProjectTitle" class="form-control" 
+                           th:value="${selectedResume != null ? selectedResume.title : 'Software Engineer - Master Resume'}" 
+                           placeholder="e.g. Full Stack Developer - Fall 2026">
+                </div>
+
+                <!-- Dropzone for Resume File -->
+                <div class="form-group">
+                    <label class="form-label">Resume File (PDF, DOCX, TXT)</label>
+                    <div class="dropzone" id="resumeDropzone" onclick="document.getElementById('resumeFileInput').click()">
+                        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <div class="dropzone-text" id="dropzoneText">Drag &amp; drop resume file here or click to browse</div>
+                        <div class="dropzone-subtext">Parsed strictly inside your browser sandbox</div>
+                    </div>
+                    <input type="file" id="resumeFileInput" accept=".pdf,.docx,.txt" style="display: none;" onchange="handleFileSelected(event)">
+                </div>
+
+                <!-- Target Job Description Input -->
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.375rem;">
+                        <label class="form-label" style="margin-bottom: 0;">Target Job Description</label>
+                        <select id="savedJdSelect" class="form-control" style="width: auto; padding: 0.2rem 0.5rem; font-size: 0.8125rem;" onchange="handleSavedJdSelection(this)">
+                            <option value="">Paste new or pick saved...</option>
+                            <option th:each="jd : ${jobDescriptions}" 
+                                    th:value="${jd.id}" 
+                                    th:data-title="${jd.title}" 
+                                    th:data-skills="${jd.extractedSkills}" 
+                                    th:data-text="${jd.text}" 
+                                    th:text="${jd.title}">
+                                Saved JD Title
+                            </option>
+                        </select>
+                    </div>
+                    <textarea id="jobDescriptionText" class="form-control" placeholder="Paste job description requirements here (e.g. We require Java, Spring Boot, MySQL, REST APIs, Git, Docker, microservices...)"></textarea>
+                </div>
+
+                <!-- Scan & Save Actions -->
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-primary" id="btnScan" onclick="performOnDeviceScan()" style="flex: 1;">
+                        ⚡ Run On-Device Scan
+                    </button>
+                    <button type="button" class="btn btn-teal" id="btnSaveVersion" onclick="saveNewVersionToServer()" style="flex: 1;" disabled>
+                        💾 Save as New Version
+                    </button>
+                </div>
+
+                <div id="parseProgress" style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center; display: none;">
+                    Processing locally on device...
+                </div>
+            </div>
+
+            <!-- 2. RIGHT PANEL: Health Score Gauge & Score Band -->
+            <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">2. Resume Health Score</h2>
+                        <div class="card-subtitle">Blends 70% job keyword match + 30% ATS formatting</div>
+                    </div>
+                    <span id="currentVersionBadge" class="badge badge-info" 
+                          th:text="${latestVersion != null ? 'v' + latestVersion.versionNumber : 'Draft'}">
+                        v1
+                    </span>
+                </div>
+
+                <!-- Radial Gauge Widget -->
+                <div class="gauge-wrapper">
+                    <div class="gauge-svg-container">
+                        <svg class="gauge-svg" viewBox="0 0 170 170" width="170" height="170">
+                            <circle class="gauge-bg" cx="85" cy="85" r="70"></circle>
+                            <circle class="gauge-fill" id="gaugeFillCircle" cx="85" cy="85" r="70"
+                                    stroke-dasharray="439.82 439.82"
+                                    stroke-dashoffset="439.82"></circle>
+                        </svg>
+                        <div class="gauge-value-box">
+                            <div class="gauge-number" id="gaugeScoreNumber">--</div>
+                            <div class="gauge-max">/ 100</div>
+                        </div>
+                    </div>
+                    <div class="gauge-band-text" id="gaugeBandTitle">Awaiting Scan</div>
+                    <div class="gauge-band-desc" id="gaugeBandDescription">
+                        Upload your resume file and paste a job description to calculate your health score.
+                    </div>
+                </div>
+
+                <!-- Score Component Breakdown Strip -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background-color: var(--bg-surface-alt); padding: 0.875rem; border-radius: var(--radius-md);">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">KEYWORD MATCH (70%)</div>
+                        <div id="statMatchPct" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">--%</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ATS PENALTY (30%)</div>
+                        <div id="statAtsPenalty" style="font-size: 1.25rem; font-weight: 700; color: var(--danger);">0 Deductions</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. FULL ROW: Score Trend Strip across Versions -->
+            <div class="card dashboard-full-row">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">3. Version Score Trend Strip</h2>
+                        <div class="card-subtitle">Tracking improvements from v1 &rarr; v2 &rarr; v3</div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span style="font-size: 0.8125rem; color: var(--text-muted);">
+                            <span th:text="${#lists.size(scoreTrends)}">0</span> versions recorded
+                        </span>
+                    </div>
+                </div>
+
+                <div class="trend-chart-box" id="trendChartContainer">
+                    <p style="text-align: center; color: var(--text-muted); padding: 2rem 0;">
+                        No previous versions recorded yet for this project. Save your first scan to begin tracking your improvement curve!
+                    </p>
+                </div>
+            </div>
+
+            <!-- 4. BOTTOM LEFT: Gap Analysis (Missing Skills & Bullet Rewrites) -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">4. Gap Analysis &amp; Bullet Rewrites</h2>
+                        <div class="card-subtitle">On-device skills matching and XYZ rewrite suggestions</div>
+                    </div>
+                </div>
+
+                <!-- Missing Skills -->
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.875rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem;">
+                        Missing Job Keywords:
+                    </div>
+                    <div id="missingSkillsContainer" class="skills-tags">
+                        <span style="font-size: 0.875rem; color: var(--text-muted);">Run scan to detect missing skills.</span>
+                    </div>
+                </div>
+
+                <!-- Matched Skills -->
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.875rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem;">
+                        Matched Keywords:
+                    </div>
+                    <div id="matchedSkillsContainer" class="skills-tags">
+                        <span style="font-size: 0.875rem; color: var(--text-muted);">Run scan to display matched skills.</span>
+                    </div>
+                </div>
+
+                <!-- Bullet Rewrites -->
+                <div>
+                    <div style="font-size: 0.875rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem;">
+                        Bullet Point Rewrite Suggestions:
+                    </div>
+                    <div id="bulletRewritesContainer">
+                        <p style="font-size: 0.875rem; color: var(--text-muted);">
+                            Weak bullets like "worked on" or "helped with" will be flagged here with strong action verbs and metric placeholders.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. BOTTOM RIGHT: ATS Compatibility Checklist -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">5. ATS Compatibility Checklist</h2>
+                        <div class="card-subtitle">Format risks that trip up automated recruiter software</div>
+                    </div>
+                </div>
+
+                <div id="atsIssuesList">
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        Run on-device scan to evaluate document length, contact credentials, and required section headers.
+                    </p>
+                </div>
+
+                <!-- Mentor Comments Strip if any exist on this version -->
+                <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle);" 
+                     th:if="${latestVersion != null && !#lists.isEmpty(latestVersion.reviewComments)}">
+                    <div style="font-size: 0.875rem; font-weight: 700; color: var(--teal); margin-bottom: 0.5rem;">
+                        🧑‍🏫 Mentor Feedback on v<span th:text="${latestVersion.versionNumber}"></span>:
+                    </div>
+                    <div th:each="c : ${latestVersion.reviewComments}" class="card" style="background-color: var(--teal-light); border-color: #99f6e4; padding: 0.75rem; margin-bottom: 0.5rem;">
+                        <div style="font-size: 0.875rem; color: #115e59;" th:text="${c.comment}">Mentor comment</div>
+                        <div style="font-size: 0.75rem; color: #0f766e; margin-top: 0.25rem;">
+                            By <strong th:text="${c.mentor.name}">Mentor</strong> &bull; <span th:text="${#temporals.format(c.createdAt, 'MMM dd, yyyy HH:mm')}">Date</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Hidden Raw Text Storage for Extracted Content -->
+    <textarea id="hiddenExtractedText" style="display: none;"></textarea>
+
+    <!-- Passing server data to JavaScript -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const initialTrends = /*[[${scoreTrends}]]*/ [];
+        const currentResumeId = /*[[${selectedResume != null ? selectedResume.id : null}]]*/ null;
+        const latestHealthScore = /*[[${latestVersion != null ? latestVersion.healthScore : null}]]*/ null;
+        /*]]>*/
+    </script>
+
+    <script>
+        // State variables
+        let computedScanResult = null;
+        let selectedFile = null;
+
+        // Initialize state on page load
+        document.addEventListener("DOMContentLoaded", () => {
+            if (initialTrends && initialTrends.length > 0) {
+                ResumeRadar.renderScoreTrendSvg("trendChartContainer", initialTrends);
+            }
+            if (latestHealthScore !== null) {
+                ResumeRadar.updateScoreGauge(latestHealthScore);
+            }
+
+            // Drag and drop setup
+            const dropzone = document.getElementById("resumeDropzone");
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add("dragover");
+                }, false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove("dragover");
+                }, false);
+            });
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt.files && dt.files.length > 0) {
+                    processFile(dt.files[0]);
+                }
+            });
+        });
+
+        function handleFileSelected(event) {
+            if (event.target.files && event.target.files.length > 0) {
+                processFile(event.target.files[0]);
+            }
+        }
+
+        async function processFile(file) {
+            selectedFile = file;
+            document.getElementById("dropzoneText").innerHTML = `<strong>Selected:</strong> ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            showAlert("File selected. Click 'Run On-Device Scan' to process.", "info");
+        }
+
+        function handleSavedJdSelection(selectEl) {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            if (opt && opt.dataset.text) {
+                document.getElementById("jobDescriptionText").value = opt.dataset.text;
+            }
+        }
+
+        function resetForNewResume() {
+            window.location.href = "/dashboard";
+        }
+
+        function showAlert(msg, type) {
+            const el = document.getElementById("statusAlert");
+            el.className = `alert alert-${type}`;
+            el.innerHTML = msg;
+            el.style.display = "flex";
+        }
+
+        async function performOnDeviceScan() {
+            const jdText = document.getElementById("jobDescriptionText").value.trim();
+            if (!selectedFile && !document.getElementById("hiddenExtractedText").value) {
+                showAlert("Please upload a resume file (PDF, DOCX, or TXT) to scan.", "danger");
+                return;
+            }
+            if (!jdText) {
+                showAlert("Please paste a target job description or choose a saved one.", "warning");
+                return;
+            }
+
+            const progressEl = document.getElementById("parseProgress");
+            progressEl.style.display = "block";
+            progressEl.innerText = "Extracting text strictly on-device in browser...";
+
+            try {
+                let resumeText = "";
+                if (selectedFile) {
+                    resumeText = await ResumeRadar.parseResumeFile(selectedFile);
+                    document.getElementById("hiddenExtractedText").value = resumeText;
+                } else {
+                    resumeText = document.getElementById("hiddenExtractedText").value;
+                }
+
+                progressEl.innerText = "Matching skills dictionary and inspecting ATS layout...";
+
+                // 1. Extract skills from Job Description
+                const jdSkills = ResumeRadar.extractSkillsFromJobDescription(jdText);
+
+                // 2. Compare resume text with JD skills
+                const matchResult = ResumeRadar.compareResumeWithJob(resumeText, jdSkills);
+
+                // 3. ATS compatibility check
+                const atsIssues = ResumeRadar.checkAtsCompatibility(resumeText);
+
+                // 4. Weak bullet rewrites
+                const rewrites = ResumeRadar.generateRewriteSuggestions(resumeText, matchResult.matchedKeywords);
+
+                // 5. Calculate Health Score
+                const healthScore = ResumeRadar.calculateHealthScore(matchResult.matchPercentage, atsIssues.length);
+
+                // Update UI Gauge
+                ResumeRadar.updateScoreGauge(healthScore);
+                document.getElementById("statMatchPct").innerText = `${matchResult.matchPercentage}%`;
+                document.getElementById("statAtsPenalty").innerText = `${atsIssues.length * 6} Pts (${atsIssues.length} issues)`;
+
+                // Update Missing Skills UI
+                const missingContainer = document.getElementById("missingSkillsContainer");
+                if (matchResult.missingKeywords.length > 0) {
+                    missingContainer.innerHTML = matchResult.missingKeywords
+                        .map(s => `<span class="skill-tag skill-missing">&minus; ${s}</span>`)
+                        .join("");
+                } else {
+                    missingContainer.innerHTML = `<span class="skill-tag skill-matched">✓ All identified skills present!</span>`;
+                }
+
+                // Update Matched Skills UI
+                const matchedContainer = document.getElementById("matchedSkillsContainer");
+                if (matchResult.matchedKeywords.length > 0) {
+                    matchedContainer.innerHTML = matchResult.matchedKeywords
+                        .map(s => `<span class="skill-tag skill-matched">&check; ${s}</span>`)
+                        .join("");
+                } else {
+                    matchedContainer.innerHTML = `<span style="font-size:0.875rem; color:var(--danger);">No target skills matched yet.</span>`;
+                }
+
+                // Update Rewrites UI
+                const rewritesContainer = document.getElementById("bulletRewritesContainer");
+                if (rewrites.length > 0) {
+                    rewritesContainer.innerHTML = rewrites.map(rw => `
+                        <div class="rewrite-card">
+                            <div class="rewrite-original"><strong>Flagged:</strong> &ldquo;${rw.original}&rdquo;</div>
+                            <div class="rewrite-suggestion"><strong>Recommended:</strong> &ldquo;${rw.suggested}&rdquo;</div>
+                        </div>
+                    `).join("");
+                } else {
+                    rewritesContainer.innerHTML = `<p style="font-size:0.875rem; color:var(--success);">✓ Strong action-oriented phrasing detected across parsed bullets!</p>`;
+                }
+
+                // Update ATS Checklist UI
+                const atsList = document.getElementById("atsIssuesList");
+                if (atsIssues.length > 0) {
+                    atsList.innerHTML = `
+                        <ul class="checklist">
+                            ${atsIssues.map(issue => `
+                                <li class="checklist-item">
+                                    <span style="color:var(--danger); font-weight:700;">⚠</span>
+                                    <div class="checklist-text">
+                                        <strong style="color:var(--danger);">${issue.type}:</strong> ${issue.description}
+                                    </div>
+                                </li>
+                            `).join("")}
+                        </ul>
+                    `;
+                } else {
+                    atsList.innerHTML = `<p style="font-size:0.875rem; color:var(--success);">✓ Clean ATS formatting: Essential headers and contact details detected.</p>`;
+                }
+
+                // Cache scan result
+                computedScanResult = {
+                    resumeText,
+                    jdText,
+                    jdSkills: jdSkills.join(", "),
+                    matchPercentage: matchResult.matchPercentage,
+                    matchedKeywords: matchResult.matchedKeywords.join(", "),
+                    missingKeywords: matchResult.missingKeywords.join(", "),
+                    atsIssues,
+                    healthScore
+                };
+
+                document.getElementById("btnSaveVersion").disabled = false;
+                progressEl.style.display = "none";
+                showAlert("On-device scan completed! Review suggestions and click 'Save as New Version' to record your progress.", "success");
+
+            } catch (err) {
+                console.error(err);
+                progressEl.style.display = "none";
+                showAlert("Error during client parsing: " + err.message, "danger");
+            }
+        }
+
+        async function saveNewVersionToServer() {
+            if (!computedScanResult) {
+                showAlert("Please run a scan before saving.", "warning");
+                return;
+            }
+
+            const title = document.getElementById("resumeProjectTitle").value.trim();
+            const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+            const payload = {
+                resumeId: currentResumeId,
+                resumeTitle: title,
+                extractedText: computedScanResult.resumeText,
+                healthScore: computedScanResult.healthScore,
+                jobTitle: "Target Position",
+                jobDescriptionText: computedScanResult.jdText,
+                jobExtractedSkills: computedScanResult.jdSkills,
+                matchPercentage: computedScanResult.matchPercentage,
+                missingKeywords: computedScanResult.missingKeywords,
+                matchedKeywords: computedScanResult.matchedKeywords,
+                atsIssues: computedScanResult.atsIssues
+            };
+
+            showAlert("Saving new version to server...", "info");
+
+            try {
+                const response = await fetch('/api/resumes/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showAlert(`Version v${data.versionNumber} successfully saved with Health Score ${data.healthScore}%! Refreshing trend...`, "success");
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl;
+                    }, 1000);
+                } else {
+                    showAlert("Server error: " + data.message, "danger");
+                }
+            } catch (err) {
+                showAlert("Network request failed: " + err.message, "danger");
+            }
+        }
+
+        function toggleMentorCodeModal() {
+            const banner = document.getElementById("mentorCodeBanner");
+            banner.style.display = (banner.style.display === "none") ? "block" : "none";
+        }
+
+        async function generateNewShareCode() {
+            const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+            try {
+                const res = await fetch('/api/mentor/share-code/generate', {
+                    method: 'POST',
+                    headers: { [csrfHeader]: csrfToken }
+                });
+                const data = await res.json();
+                if (data.shareCode) {
+                    document.getElementById("displayShareCode").innerText = data.shareCode;
+                    showAlert("New mentor share code generated!", "success");
+                }
+            } catch (err) {
+                showAlert("Failed to generate code: " + err.message, "danger");
+            }
+        }
+    </script>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>
