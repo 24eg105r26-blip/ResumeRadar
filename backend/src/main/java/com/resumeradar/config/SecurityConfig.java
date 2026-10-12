@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,6 +15,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -41,9 +47,37 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
+    /**
+     * CORS Configuration Source:
+     * Defines allowed frontend origins (e.g. Vite/React dev servers on 5173, 5174, and deployed Netlify domains).
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:3000",
+                "https://24eg105r60.netlify.app",
+                "https://24eg105r26.netlify.app"
+        ));
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(Customizer.withDefaults())
             .authenticationProvider(authenticationProvider())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
@@ -57,7 +91,8 @@ public class SecurityConfig {
                     "/js/**",
                     "/vendor/**",
                     "/images/**",
-                    "/favicon.ico"
+                    "/favicon.ico",
+                    "/api/auth/**"
                 ).permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/mentor/**").hasAnyRole("MENTOR", "ADMIN")
