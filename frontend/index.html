@@ -36,7 +36,7 @@
 
             <div class="nav-user">
                 <span class="user-badge">100% On-Device Privacy</span>
-                <button type="button" class="btn btn-teal btn-sm" id="btnMentorCode">🤝 Mentor Link</button>
+                <button type="button" class="btn btn-teal btn-sm" id="btnMentorCode" onclick="window.toggleMentorModal()">🤝 Mentor Link</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="localStorage.removeItem('resumeradar_session'); window.location.href='/login.html';">Logout</button>
             </div>
         </div>
@@ -92,12 +92,12 @@
 
                 <div class="form-group">
                     <label class="form-label" for="resumeProjectTitle">Resume Project Title</label>
-                    <input type="text" id="resumeProjectTitle" class="form-control" value="Full Stack Developer Resume" placeholder="e.g. Full Stack Developer - Fall 2026">
+                    <input type="text" id="resumeProjectTitle" class="form-control" value="My Engineering Resume" placeholder="e.g. Full Stack Developer - Fall 2026">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Resume File (PDF, DOCX, TXT)</label>
-                    <div class="dropzone" id="resumeDropzone" onclick="document.getElementById('resumeFileInput').click()">
+                    <div class="dropzone" id="resumeDropzone">
                         <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
@@ -113,13 +113,13 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.375rem;">
                         <label class="form-label" style="margin-bottom: 0;">Target Job Description</label>
                         <select id="savedJdSelect" class="form-control" style="width: auto; padding: 0.2rem 0.5rem; font-size: 0.8125rem;">
-                            <option value="">Load Sample Job Role...</option>
+                            <option value="">Select Sample Role or Paste Below...</option>
                             <option value="java">Full Stack Java Engineer</option>
                             <option value="react">React Frontend Developer</option>
                             <option value="python">Backend Python / AWS</option>
                         </select>
                     </div>
-                    <textarea id="jobDescriptionText" class="form-control" placeholder="Paste job description requirements here (e.g. We require Java, Spring Boot, MySQL, REST APIs, Git, Docker, microservices...)">We are seeking a Full Stack Java Developer proficient in Java, Spring Boot, MySQL, REST APIs, Git, Docker, and microservices architecture. Strong problem-solving and clean code fundamentals required.</textarea>
+                    <textarea id="jobDescriptionText" class="form-control" placeholder="Paste target job description requirements here (e.g. We require Java, Spring Boot, MySQL, REST APIs, Git, Docker, microservices...)">We are seeking a Full Stack Java Developer proficient in Java, Spring Boot, MySQL, REST APIs, Git, Docker, and microservices architecture. Strong problem-solving and clean code fundamentals required.</textarea>
                 </div>
 
                 <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
@@ -137,7 +137,7 @@
                         <h2 class="card-title">2. Resume Health Score</h2>
                         <div class="card-subtitle">Blends 70% job keyword match + 30% ATS formatting</div>
                     </div>
-                    <span id="currentVersionBadge" class="badge badge-info">v2</span>
+                    <span id="currentVersionBadge" class="badge badge-info">Draft</span>
                 </div>
 
                 <div class="gauge-wrapper">
@@ -147,24 +147,24 @@
                             <circle class="gauge-fill" id="gaugeFillCircle" cx="85" cy="85" r="70" stroke-dasharray="439.82 439.82" stroke-dashoffset="439.82"></circle>
                         </svg>
                         <div class="gauge-value-box">
-                            <div class="gauge-number" id="gaugeScoreNumber">82</div>
+                            <div class="gauge-number" id="gaugeScoreNumber">--</div>
                             <div class="gauge-max">/ 100</div>
                         </div>
                     </div>
-                    <div class="gauge-band-text" id="gaugeBandTitle">Excellent</div>
+                    <div class="gauge-band-text" id="gaugeBandTitle">Awaiting Scan</div>
                     <div class="gauge-band-desc" id="gaugeBandDescription">
-                        Interview-ready: High keyword alignment and clean ATS structure.
+                        Upload your resume (PDF/DOCX/TXT) and click 'Run On-Device Scan' to evaluate your ATS score.
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background-color: var(--bg-surface-alt); padding: 0.875rem; border-radius: var(--radius-md);">
                     <div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">KEYWORD MATCH (70%)</div>
-                        <div id="statMatchPct" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">88%</div>
+                        <div id="statMatchPct" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">--%</div>
                     </div>
                     <div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ATS PENALTY (30%)</div>
-                        <div id="statAtsPenalty" style="font-size: 1.25rem; font-weight: 700; color: var(--danger);">0 Deductions</div>
+                        <div id="statAtsPenalty" style="font-size: 1.25rem; font-weight: 700; color: var(--danger);">--</div>
                     </div>
                 </div>
             </div>
@@ -176,9 +176,13 @@
                         <h2 class="card-title">3. Version Score Trend Strip</h2>
                         <div class="card-subtitle">Tracking improvements from v1 &rarr; v2 &rarr; v3</div>
                     </div>
-                    <span id="versionCountText" style="font-size: 0.8125rem; color: var(--text-muted);">2 versions recorded</span>
+                    <span id="versionCountText" style="font-size: 0.8125rem; color: var(--text-muted);">0 versions recorded</span>
                 </div>
-                <div class="trend-chart-box" id="trendChartContainer"></div>
+                <div class="trend-chart-box" id="trendChartContainer">
+                    <p style="text-align: center; color: var(--text-muted); padding: 2.5rem 1rem;">
+                        No versions recorded yet. Upload your resume and click 'Run On-Device Scan' to compute your initial score!
+                    </p>
+                </div>
             </div>
 
             <!-- 4. Gap Analysis -->
@@ -189,28 +193,21 @@
                 <div style="margin-bottom: 1.25rem;">
                     <div style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.35rem;">Missing Job Keywords:</div>
                     <div id="missingSkillsContainer" class="skills-tags">
-                        <span class="skill-tag skill-matched">✓ All identified skills present in latest revision!</span>
+                        <span style="font-size: 0.875rem; color: var(--text-muted);">Upload a resume and run scan to detect missing keywords.</span>
                     </div>
                 </div>
                 <div style="margin-bottom: 1.25rem;">
                     <div style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.35rem;">Matched Keywords:</div>
                     <div id="matchedSkillsContainer" class="skills-tags">
-                        <span class="skill-tag skill-matched">&check; java</span>
-                        <span class="skill-tag skill-matched">&check; spring</span>
-                        <span class="skill-tag skill-matched">&check; spring boot</span>
-                        <span class="skill-tag skill-matched">&check; mysql</span>
-                        <span class="skill-tag skill-matched">&check; git</span>
-                        <span class="skill-tag skill-matched">&check; docker</span>
-                        <span class="skill-tag skill-matched">&check; microservices</span>
+                        <span style="font-size: 0.875rem; color: var(--text-muted);">Upload a resume and run scan to display matched keywords.</span>
                     </div>
                 </div>
                 <div>
                     <div style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.35rem;">Bullet Point Rewrite Suggestions:</div>
                     <div id="bulletRewritesContainer">
-                        <div class="rewrite-card">
-                            <div class="rewrite-original"><strong>Passive:</strong> &ldquo;Worked on backend endpoints for student registration.&rdquo;</div>
-                            <div class="rewrite-suggestion"><strong>Google XYZ Suggestion:</strong> &ldquo;Architected RESTful microservices using Spring Boot and MySQL, improving latency by 32%.&rdquo;</div>
-                        </div>
+                        <p style="font-size: 0.875rem; color: var(--text-muted);">
+                            Weak phrases (e.g., "worked on", "helped with") will be detected and rewritten here with Google XYZ action verbs.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -221,7 +218,9 @@
                     <h2 class="card-title">5. ATS Compatibility Checklist</h2>
                 </div>
                 <div id="atsIssuesList">
-                    <p style="font-size: 0.875rem; color: var(--success);">✓ Clean ATS formatting: Essential headers and contact details detected.</p>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        Run on-device scan to evaluate document length, contact details, and required section headers.
+                    </p>
                 </div>
             </div>
 
@@ -236,7 +235,7 @@
         <div class="container footer-inner">
             <div><strong>ResumeRadar</strong> &copy; 2026 — Zero Server Uploads. On-Device Privacy Guaranteed.</div>
             <div style="display: flex; gap: 1rem;">
-                <span>Light Theme</span> &bull; <span>Vite Frontend</span> &bull; <span>Spring Boot Backend</span>
+                <span>Light Theme</span> &bull; <span>On-Device Engine</span>
             </div>
         </div>
     </footer>
