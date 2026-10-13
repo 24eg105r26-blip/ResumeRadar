@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeRadar — On-Device ATS Resume Checker & Scanner</title>
+    <meta name="description" content="Check your resume against target job descriptions directly on your device. Instant ATS compatibility feedback, score trends, and bullet rewrites.">
+
+    <!-- Login guard: send visitors to login page if not logged in -->
+    <script>
+        if (!localStorage.getItem("resumeradar_session")) {
+            window.location.replace("/login.html");
+        }
+    </script>
+
+    <!-- External Vendor Scripts -->
+    <script src="/vendor/pdf.min.js"></script>
+    <script src="/vendor/mammoth.browser.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container navbar-inner">
+            <a href="/" class="brand">
+                <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="6"></circle>
+                    <circle cx="12" cy="12" r="2"></circle>
+                    <line x1="12" y1="2" x2="12" y2="4"></line>
+                    <line x1="12" y1="20" x2="12" y2="22"></line>
+                    <line x1="20" y1="12" x2="22" y2="12"></line>
+                    <line x1="2" y1="12" x2="4" y2="12"></line>
+                </svg>
+                <span>ResumeRadar</span>
+            </a>
+
+            <div class="nav-user">
+                <span class="user-badge">100% On-Device Privacy</span>
+                <button type="button" class="btn btn-teal btn-sm" id="btnMentorCode">🤝 Mentor Link</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="localStorage.removeItem('resumeradar_session'); window.location.href='/login.html';">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        
+        <!-- Header Strip -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+            <div>
+                <h1>Resume Health Dashboard</h1>
+                <p style="color: var(--text-muted); font-size: 0.9375rem;">
+                    Private on-device ATS scan &bull; Raw resume files are never uploaded
+                </p>
+            </div>
+        </div>
+
+        <!-- Notification Bar -->
+        <div id="statusAlert" class="alert" style="display: none;"></div>
+
+        <!-- Mentor Code Banner -->
+        <div id="mentorCodeBanner" class="card" style="display: none; background-color: var(--teal-light); border-color: #99f6e4; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <strong style="color: #0f766e; font-size: 1rem;">Share Your Progress with a Mentor</strong>
+                    <p style="color: #115e59; font-size: 0.875rem; margin: 0.2rem 0 0;">
+                        Give this code to your mentor. They can track your score growth without seeing your raw resume text:
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span id="displayShareCode" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; background: #ffffff; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); border: 1px dashed var(--teal);">
+                        RADAR-DEMO-2026
+                    </span>
+                    <button type="button" class="btn btn-teal btn-sm" onclick="window.generateCode()">Generate Code</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mentorCodeBanner').style.display='none'">Dismiss</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ONE-SCREEN COMMAND CENTER GRID -->
+        <div class="dashboard-grid">
+
+            <!-- 1. Upload & Input Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">1. Upload &amp; Match Input</h2>
+                        <div class="card-subtitle">Local browser extraction &bull; zero cloud upload</div>
+                    </div>
+                    <span class="badge badge-teal">On-Device</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="resumeProjectTitle">Resume Project Title</label>
+                    <input type="text" id="resumeProjectTitle" class="form-control" value="Full Stack Developer Resume" placeholder="e.g. Full Stack Developer - Fall 2026">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Resume File (PDF, DOCX, TXT)</label>
+                    <div class="dropzone" id="resumeDropzone" onclick="document.getElementById('resumeFileInput').click()">
+                        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <div class="dropzone-text" id="dropzoneText">Drag &amp; drop resume file here or click to browse</div>
+                        <div class="dropzone-subtext">Parsed strictly inside your browser sandbox</div>
+                    </div>
+                    <input type="file" id="resumeFileInput" accept=".pdf,.docx,.txt" style="display: none;">
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.375rem;">
+                        <label class="form-label" style="margin-bottom: 0;">Target Job Description</label>
+                        <select id="savedJdSelect" class="form-control" style="width: auto; padding: 0.2rem 0.5rem; font-size: 0.8125rem;">
+                            <option value="">Load Sample Job Role...</option>
+                            <option value="java">Full Stack Java Engineer</option>
+                            <option value="react">React Frontend Developer</option>
+                            <option value="python">Backend Python / AWS</option>
+                        </select>
+                    </div>
+                    <textarea id="jobDescriptionText" class="form-control" placeholder="Paste job description requirements here (e.g. We require Java, Spring Boot, MySQL, REST APIs, Git, Docker, microservices...)">We are seeking a Full Stack Java Developer proficient in Java, Spring Boot, MySQL, REST APIs, Git, Docker, and microservices architecture. Strong problem-solving and clean code fundamentals required.</textarea>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-primary" id="btnScan" style="flex: 1;">⚡ Run On-Device Scan</button>
+                    <button type="button" class="btn btn-teal" id="btnSaveVersion" style="flex: 1;" disabled>💾 Save as New Version</button>
+                </div>
+
+                <div id="parseProgress" style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 0.5rem; text-align: center; display: none;"></div>
+            </div>
+
+            <!-- 2. Health Score Gauge -->
+            <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">2. Resume Health Score</h2>
+                        <div class="card-subtitle">Blends 70% job keyword match + 30% ATS formatting</div>
+                    </div>
+                    <span id="currentVersionBadge" class="badge badge-info">v2</span>
+                </div>
+
+                <div class="gauge-wrapper">
+                    <div class="gauge-svg-container">
+                        <svg class="gauge-svg" viewBox="0 0 170 170" width="170" height="170">
+                            <circle class="gauge-bg" cx="85" cy="85" r="70"></circle>
+                            <circle class="gauge-fill" id="gaugeFillCircle" cx="85" cy="85" r="70" stroke-dasharray="439.82 439.82" stroke-dashoffset="439.82"></circle>
+                        </svg>
+                        <div class="gauge-value-box">
+                            <div class="gauge-number" id="gaugeScoreNumber">82</div>
+                            <div class="gauge-max">/ 100</div>
+                        </div>
+                    </div>
+                    <div class="gauge-band-text" id="gaugeBandTitle">Excellent</div>
+                    <div class="gauge-band-desc" id="gaugeBandDescription">
+                        Interview-ready: High keyword alignment and clean ATS structure.
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background-color: var(--bg-surface-alt); padding: 0.875rem; border-radius: var(--radius-md);">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">KEYWORD MATCH (70%)</div>
+                        <div id="statMatchPct" style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">88%</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ATS PENALTY (30%)</div>
+                        <div id="statAtsPenalty" style="font-size: 1.25rem; font-weight: 700; color: var(--danger);">0 Deductions</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Trend Strip -->
+            <div class="card dashboard-full-row">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">3. Version Score Trend Strip</h2>
+                        <div class="card-subtitle">Tracking improvements from v1 &rarr; v2 &rarr; v3</div>
+                    </div>
+                    <span id="versionCountText" style="font-size: 0.8125rem; color: var(--text-muted);">2 versions recorded</span>
+                </div>
+                <div class="trend-chart-box" id="trendChartContainer"></div>
+            </div>
+
+            <!-- 4. Gap Analysis -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">4. Gap Analysis &amp; Bullet Rewrites</h2>
+                </div>
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.35rem;">Missing Job Keywords:</div>
+                    <div id="missingSkillsContainer" class="skills-tags">
+                        <span class="skill-tag skill-matched">✓ All identified skills present in latest revision!</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.35rem;">Matched Keywords:</div>
+                    <div id="matchedSkillsContainer" class="skills-tags">
+                        <span class="skill-tag skill-matched">&check; java</span>
+                        <span class="skill-tag skill-matched">&check; spring</span>
+                        <span class="skill-tag skill-matched">&check; spring boot</span>
+                        <span class="skill-tag skill-matched">&check; mysql</span>
+                        <span class="skill-tag skill-matched">&check; git</span>
+                        <span class="skill-tag skill-matched">&check; docker</span>
+                        <span class="skill-tag skill-matched">&check; microservices</span>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.875rem; font-weight: 700; margin-bottom: 0.35rem;">Bullet Point Rewrite Suggestions:</div>
+                    <div id="bulletRewritesContainer">
+                        <div class="rewrite-card">
+                            <div class="rewrite-original"><strong>Passive:</strong> &ldquo;Worked on backend endpoints for student registration.&rdquo;</div>
+                            <div class="rewrite-suggestion"><strong>Google XYZ Suggestion:</strong> &ldquo;Architected RESTful microservices using Spring Boot and MySQL, improving latency by 32%.&rdquo;</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. ATS Checklist -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">5. ATS Compatibility Checklist</h2>
+                </div>
+                <div id="atsIssuesList">
+                    <p style="font-size: 0.875rem; color: var(--success);">✓ Clean ATS formatting: Essential headers and contact details detected.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Hidden Extracted Storage -->
+    <textarea id="hiddenExtractedText" style="display: none;"></textarea>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div><strong>ResumeRadar</strong> &copy; 2026 — Zero Server Uploads. On-Device Privacy Guaranteed.</div>
+            <div style="display: flex; gap: 1rem;">
+                <span>Light Theme</span> &bull; <span>Vite Frontend</span> &bull; <span>Spring Boot Backend</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Vite Main Entry Script -->
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
