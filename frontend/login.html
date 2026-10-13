@@ -7,9 +7,9 @@
 </head>
 <body>
     <main class="container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem;">
-        <div class="card" style="width: 100%; max-width: 420px;">
+        <div class="card" style="width: 100%; max-width: 440px;">
             <div style="text-align: center; margin-bottom: 1.25rem;">
-                <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">ResumeRadar</h1>
+                <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem; color: var(--primary);">ResumeRadar</h1>
                 <p id="formSubtitle" style="color: var(--text-muted); font-size: 0.9375rem;">Login to open your Resume Health Dashboard</p>
             </div>
 
@@ -18,23 +18,52 @@
             <form id="authForm">
                 <div class="form-group" id="nameGroup" style="display: none;">
                     <label class="form-label" for="fullName">Full Name</label>
-                    <input type="text" id="fullName" class="form-control" placeholder="Your name">
+                    <input type="text" id="fullName" class="form-control" placeholder="e.g. Alex Learner">
                 </div>
+
+                <div class="form-group" id="roleGroup" style="display: none;">
+                    <label class="form-label" for="roleSelect">Account Role</label>
+                    <select id="roleSelect" class="form-control">
+                        <option value="student">Student / Job Seeker</option>
+                        <option value="mentor">Mentor / Guide</option>
+                    </select>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        Mentors can view student score trends and leave review notes.
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
+                    <label class="form-label" for="email">Email Address</label>
                     <input type="email" id="email" class="form-control" placeholder="you@example.com" required>
                 </div>
+
                 <div class="form-group">
                     <label class="form-label" for="password">Password</label>
                     <input type="password" id="password" class="form-control" placeholder="Minimum 6 characters" required>
                 </div>
+
                 <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 0.5rem;">Login</button>
             </form>
 
             <p style="text-align: center; font-size: 0.875rem; margin-top: 1rem; color: var(--text-muted);">
                 <span id="toggleText">New here?</span>
-                <a href="#" id="toggleLink" style="font-weight: 600;">Create an account</a>
+                <a href="#" id="toggleLink" style="font-weight: 600; color: var(--primary);">Create an account</a>
             </p>
+
+            <!-- Quick Demo Credentials Box -->
+            <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    🚀 Quick Demo Accounts (Click to autofill):
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <button type="button" class="btn btn-outline btn-sm" id="btnFillStudent" style="justify-content: flex-start; font-size: 0.8125rem;">
+                        👤 Student: student@resumeradar.com
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" id="btnFillMentor" style="justify-content: flex-start; font-size: 0.8125rem;">
+                        🧑‍🏫 Mentor: mentor@resumeradar.com
+                    </button>
+                </div>
+            </div>
         </div>
     </main>
 

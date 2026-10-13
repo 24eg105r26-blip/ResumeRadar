@@ -6,7 +6,7 @@
     <title>ResumeRadar — On-Device ATS Resume Checker & Scanner</title>
     <meta name="description" content="Check your resume against target job descriptions directly on your device. Instant ATS compatibility feedback, score trends, and bullet rewrites.">
 
-    <!-- Login guard: send visitors to login page if not logged in -->
+    <!-- Login guard: redirect visitors to login page if no active session -->
     <script>
         if (!localStorage.getItem("resumeradar_session")) {
             window.location.replace("/login.html");
@@ -16,6 +16,29 @@
     <!-- External Vendor Scripts -->
     <script src="/vendor/pdf.min.js"></script>
     <script src="/vendor/mammoth.browser.min.js"></script>
+
+    <style>
+        /* Modal Overlay for Mentor Link */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-card {
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 540px;
+            box-shadow: var(--shadow-lg);
+            padding: 1.75rem;
+            position: relative;
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -35,9 +58,9 @@
             </a>
 
             <div class="nav-user">
-                <span class="user-badge">100% On-Device Privacy</span>
+                <span class="user-badge" id="userNavBadge">Loading user...</span>
                 <button type="button" class="btn btn-teal btn-sm" id="btnMentorCode" onclick="window.toggleMentorModal()">🤝 Mentor Link</button>
-                <button type="button" class="btn btn-outline btn-sm" onclick="localStorage.removeItem('resumeradar_session'); window.location.href='/login.html';">Logout</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="window.logout()">Logout</button>
             </div>
         </div>
     </nav>
@@ -55,29 +78,69 @@
             </div>
         </div>
 
-        <!-- Notification Bar -->
+        <!-- Global Status Notification Bar -->
         <div id="statusAlert" class="alert" style="display: none;"></div>
 
-        <!-- Mentor Code Banner -->
-        <div id="mentorCodeBanner" class="card" style="display: none; background-color: var(--teal-light); border-color: #99f6e4; margin-bottom: 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                <div>
-                    <strong style="color: #0f766e; font-size: 1rem;">Share Your Progress with a Mentor</strong>
-                    <p style="color: #115e59; font-size: 0.875rem; margin: 0.2rem 0 0;">
-                        Give this code to your mentor. They can track your score growth without seeing your raw resume text:
-                    </p>
+        <!-- ==================================================================
+             MENTOR HUB PANEL (Visible when logged in as a Mentor)
+             ================================================================== -->
+        <section id="mentorHubPanel" style="display: none; margin-bottom: 2rem;">
+            <div class="card" style="background-color: var(--teal-light); border-color: #99f6e4; margin-bottom: 1.5rem;">
+                <div class="card-header" style="border-bottom-color: #99f6e4;">
+                    <div>
+                        <h2 class="card-title" style="color: #0f766e;">🧑‍🏫 Mentor Command Center</h2>
+                        <div class="card-subtitle" style="color: #115e59;">
+                            Connect with learners by their share code &bull; Review score curves &bull; Leave actionable feedback
+                        </div>
+                    </div>
+                    <span class="badge badge-teal">Mentor Mode</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span id="displayShareCode" style="font-family: var(--font-mono); font-weight: 700; font-size: 1.15rem; background: #ffffff; padding: 0.35rem 0.75rem; border-radius: var(--radius-sm); border: 1px dashed var(--teal);">
-                        RADAR-DEMO-2026
-                    </span>
-                    <button type="button" class="btn btn-teal btn-sm" onclick="window.generateCode()">Generate Code</button>
-                    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mentorCodeBanner').style.display='none'">Dismiss</button>
+
+                <!-- Connect to Student Form -->
+                <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-top: 1rem;">
+                    <div style="flex: 1; min-width: 260px;">
+                        <label class="form-label" for="mentorStudentCodeInput" style="color: #0f766e; font-weight: 700;">
+                            Connect Student by Share Code:
+                        </label>
+                        <input type="text" id="mentorStudentCodeInput" class="form-control" placeholder="e.g. RADAR-DEMO-2026" style="text-transform: uppercase;">
+                    </div>
+                    <button type="button" class="btn btn-teal" onclick="window.linkStudentByCode()">Connect to Student</button>
                 </div>
             </div>
-        </div>
 
-        <!-- ONE-SCREEN COMMAND CENTER GRID -->
+            <!-- Connected Students List & Trend View -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">Connected Students &amp; Score Progression</h3>
+                        <div class="card-subtitle">Tracking score climbs across revisions (v1 &rarr; v2 &rarr; v3)</div>
+                    </div>
+                </div>
+                <div id="linkedStudentsContainer">
+                    <p style="color: var(--text-muted); padding: 1rem 0;">No students connected yet.</p>
+                </div>
+            </div>
+
+            <!-- Mentor Feedback Box -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">Leave Guidance for Student</h3>
+                        <div class="card-subtitle">Your advice appears directly on the student's dashboard</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="mentorFeedbackText">Mentor Guidance Note</label>
+                    <textarea id="mentorFeedbackText" class="form-control" style="min-height: 110px;" 
+                              placeholder="e.g. Great progress on v2! In your next draft, emphasize database latency reduction and add Docker / CI/CD keywords..."></textarea>
+                </div>
+                <button type="button" class="btn btn-teal" onclick="window.postMentorFeedback()">Post Guidance to Student</button>
+            </div>
+        </section>
+
+        <!-- ==================================================================
+             STUDENT ATS SCANNER GRID (One-Screen Command Center)
+             ================================================================== -->
         <div class="dashboard-grid">
 
             <!-- 1. Upload & Input Panel -->
@@ -212,7 +275,7 @@
                 </div>
             </div>
 
-            <!-- 5. ATS Checklist -->
+            <!-- 5. ATS Checklist & Mentor Feedback -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">5. ATS Compatibility Checklist</h2>
@@ -222,6 +285,16 @@
                         Run on-device scan to evaluate document length, contact details, and required section headers.
                     </p>
                 </div>
+
+                <!-- Feedback from Mentors inline section -->
+                <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle);">
+                    <div style="font-size: 0.875rem; font-weight: 700; color: var(--teal); margin-bottom: 0.5rem;">
+                        🧑‍🏫 Guidance from Your Mentor:
+                    </div>
+                    <div id="studentMentorFeedbackList">
+                        <p style="font-size: 0.875rem; color: var(--text-muted);">No mentor notes yet.</p>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -229,6 +302,51 @@
 
     <!-- Hidden Extracted Storage -->
     <textarea id="hiddenExtractedText" style="display: none;"></textarea>
+
+    <!-- ==================================================================
+         STUDENT MENTOR LINK MODAL DIALOG
+         ================================================================== -->
+    <div id="mentorLinkModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="color: #0f766e; margin-bottom: 0.25rem;">🤝 Mentor Link &amp; Share Code</h3>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">
+                        Share your score growth with a mentor without exposing your raw resume text.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" onclick="window.closeMentorModal()">✕</button>
+            </div>
+
+            <div style="background: var(--teal-light); border: 1px dashed var(--teal); border-radius: var(--radius-md); padding: 1.25rem; text-align: center; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #0f766e; text-transform: uppercase; margin-bottom: 0.25rem;">
+                    Your Student Share Code
+                </div>
+                <div id="modalStudentShareCode" style="font-family: var(--font-mono); font-size: 1.75rem; font-weight: 800; color: var(--teal); letter-spacing: 0.05em; margin: 0.5rem 0;">
+                    RADAR-DEMO-2026
+                </div>
+                <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.75rem;">
+                    <button type="button" class="btn btn-teal btn-sm" onclick="window.copyShareCode()">📋 Copy Code</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="window.generateNewShareCode()">🔄 Generate New</button>
+                </div>
+            </div>
+
+            <div style="font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.25rem;">
+                <strong>How it works:</strong> Give this code to your college guide or senior mentor. When they sign in with a Mentor account, they can track your Health Score curve and post actionable guidance for you.
+            </div>
+
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+                <h4 style="font-size: 0.9375rem; color: var(--text-primary); margin-bottom: 0.5rem;">Recent Mentor Notes:</h4>
+                <div id="modalMentorFeedbackList">
+                    <p style="font-size: 0.8125rem; color: var(--text-muted);">Check the dashboard card for full guidance notes.</p>
+                </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 1.25rem;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.closeMentorModal()">Done</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
