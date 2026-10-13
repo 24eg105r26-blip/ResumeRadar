@@ -56,10 +56,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:3000",
-                "https://24eg105r60.netlify.app",
+                "https://resumeradar-1-hadj.onrender.com",
                 "https://24eg105r26.netlify.app"
         ));
         configuration.setAllowedMethods(List.of(
