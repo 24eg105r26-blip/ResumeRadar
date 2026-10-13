@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — ResumeRadar</title>
+  <script type="module" crossorigin src="/assets/login-BMXlRvgN.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/style-Cw7hGYh8.js">
+  <link rel="stylesheet" crossorigin href="/assets/style-DDoI4hI3.css">
+</head>
+<body>
+    <main class="container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem;">
+        <div class="card" style="width: 100%; max-width: 460px; box-shadow: var(--shadow-md);">
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+                <h1 style="font-size: 1.85rem; margin-bottom: 0.25rem; color: var(--primary);">ResumeRadar</h1>
+                <p id="formSubtitle" style="color: var(--text-muted); font-size: 0.9375rem;">
+                    Sign in to open your Resume Health Dashboard
+                </p>
+            </div>
+
+            <!-- Role Tabs: Student vs Mentor -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: var(--bg-surface-alt); padding: 0.35rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+                <button type="button" id="tabStudent" class="btn btn-primary btn-sm" style="font-weight: 700;">
+                    🎓 Student Portal
+                </button>
+                <button type="button" id="tabMentor" class="btn btn-outline btn-sm" style="font-weight: 700;">
+                    🧑‍🏫 Mentor Portal
+                </button>
+            </div>
+
+            <div id="statusAlert" class="alert" style="display: none; margin-bottom: 1rem;"></div>
+
+            <form id="authForm">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label class="form-label" for="fullName">Full Name</label>
+                    <input type="text" id="fullName" class="form-control" placeholder="e.g. Alex Learner">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="Minimum 6 characters" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 0.5rem;">
+                    Login as Student
+                </button>
+            </form>
+
+            <p style="text-align: center; font-size: 0.875rem; margin-top: 1.25rem; color: var(--text-muted);">
+                <span id="toggleText">New here?</span>
+                <a href="#" id="toggleLink" style="font-weight: 600; color: var(--primary);">Create an account</a>
+            </p>
+
+            <!-- 1-Click Instant Demo Login Box -->
+            <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    ⚡ Instant Demo Sign-In:
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="btnQuickDemo" style="width: 100%; justify-content: center; font-size: 0.8125rem;">
+                    👉 Click to sign in as Demo Student (Alex Learner)
+                </button>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

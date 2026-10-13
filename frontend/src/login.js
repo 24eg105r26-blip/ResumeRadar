@@ -3,44 +3,68 @@ import './style.css';
 const USERS_KEY = 'resumeradar_users';
 const SESSION_KEY = 'resumeradar_session';
 
-// If already logged in, redirect straight to dashboard
+// If already logged in, redirect directly to dashboard
 if (localStorage.getItem(SESSION_KEY)) {
     window.location.replace('/');
 }
 
-// Seed demo accounts if users key does not exist yet
-async function seedDefaultUsers() {
-    let existing = JSON.parse(localStorage.getItem(USERS_KEY));
-    if (!existing) {
-        existing = {};
-        const studentHash = await hashPassword('Password123!');
-        const mentorHash = await hashPassword('Password123!');
-        existing['student@resumeradar.com'] = {
-            name: 'Alex Learner',
-            role: 'student',
-            passwordHash: studentHash
-        };
-        existing['mentor@resumeradar.com'] = {
-            name: 'Sarah Mentor',
-            role: 'mentor',
-            passwordHash: mentorHash
-        };
-        localStorage.setItem(USERS_KEY, JSON.stringify(existing));
-    }
-}
-seedDefaultUsers();
+// Pre-computed SHA-256 for 'Password123!'
+const DEMO_PASSWORD_HASH = 'a109e36947ad56de1dca1cc49f0ef8ac9ad9a7b1aa0df41fb3c4cb73c1ff01ea';
 
-let mode = 'login'; // 'login' or 'signup'
+const DEFAULT_USERS = {
+    'student@resumeradar.com': {
+        name: 'Alex Learner',
+        role: 'student',
+        passwordHash: DEMO_PASSWORD_HASH
+    },
+    'mentor@resumeradar.com': {
+        name: 'Sarah Mentor',
+        role: 'mentor',
+        passwordHash: DEMO_PASSWORD_HASH
+    }
+};
+
+// Always retrieve users with guaranteed demo accounts
+function getUsers() {
+    let users = {};
+    try {
+        users = JSON.parse(localStorage.getItem(USERS_KEY)) || {};
+    } catch (_) {
+        users = {};
+    }
+
+    let needsSave = false;
+    for (const [email, demoUser] of Object.entries(DEFAULT_USERS)) {
+        if (!users[email]) {
+            users[email] = demoUser;
+            needsSave = true;
+        }
+    }
+
+    if (needsSave) {
+        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+    return users;
+}
+// Seed immediately
+getUsers();
+
+let selectedRole = 'student'; // 'student' or 'mentor'
+let mode = 'login';          // 'login' or 'signup'
 
 const form = document.getElementById('authForm');
 const nameGroup = document.getElementById('nameGroup');
-const roleGroup = document.getElementById('roleGroup');
-const roleSelect = document.getElementById('roleSelect');
+const fullNameInput = document.getElementById('fullName');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
 const submitBtn = document.getElementById('submitBtn');
 const subtitle = document.getElementById('formSubtitle');
 const toggleText = document.getElementById('toggleText');
 const toggleLink = document.getElementById('toggleLink');
 const alertBox = document.getElementById('statusAlert');
+const tabStudent = document.getElementById('tabStudent');
+const tabMentor = document.getElementById('tabMentor');
+const btnQuickDemo = document.getElementById('btnQuickDemo');
 
 function showAlert(text, type) {
     alertBox.className = 'alert alert-' + type;
@@ -48,7 +72,6 @@ function showAlert(text, type) {
     alertBox.style.display = 'flex';
 }
 
-// SHA-256 password hashing
 async function hashPassword(text) {
     const data = new TextEncoder().encode(text);
     const buffer = await crypto.subtle.digest('SHA-256', data);
@@ -57,61 +80,93 @@ async function hashPassword(text) {
         .join('');
 }
 
-function getUsers() {
-    return JSON.parse(localStorage.getItem(USERS_KEY)) || {};
-}
-
-function setMode(newMode) {
-    mode = newMode;
+function updateUI() {
     alertBox.style.display = 'none';
+
+    // Update Portal Tabs
+    if (selectedRole === 'student') {
+        tabStudent.className = 'btn btn-primary btn-sm';
+        tabMentor.className = 'btn btn-outline btn-sm';
+        if (btnQuickDemo) {
+            btnQuickDemo.innerText = '👉 Click to sign in as Demo Student (Alex Learner)';
+        }
+    } else {
+        tabMentor.className = 'btn btn-teal btn-sm';
+        tabStudent.className = 'btn btn-outline btn-sm';
+        if (btnQuickDemo) {
+            btnQuickDemo.innerText = '👉 Click to sign in as Demo Mentor (Sarah Mentor)';
+        }
+    }
+
+    // Update Mode (Login vs Signup)
     if (mode === 'signup') {
         nameGroup.style.display = 'block';
-        roleGroup.style.display = 'block';
-        submitBtn.innerText = 'Create Account';
-        subtitle.innerText = 'Create your free ResumeRadar account';
+        submitBtn.innerText = `Create ${selectedRole === 'mentor' ? 'Mentor' : 'Student'} Account`;
+        subtitle.innerText = selectedRole === 'mentor' 
+            ? 'Create your free ResumeRadar Mentor account' 
+            : 'Create your free ResumeRadar Student account';
         toggleText.innerText = 'Already have an account?';
         toggleLink.innerText = 'Login';
     } else {
         nameGroup.style.display = 'none';
-        roleGroup.style.display = 'none';
-        submitBtn.innerText = 'Login';
-        subtitle.innerText = 'Login to open your Resume Health Dashboard';
+        submitBtn.innerText = `Login as ${selectedRole === 'mentor' ? 'Mentor' : 'Student'}`;
+        subtitle.innerText = selectedRole === 'mentor'
+            ? 'Mentor Portal — Track student score curves & leave guidance'
+            : 'Student Portal — Scan resumes and view health scores';
         toggleText.innerText = 'New here?';
         toggleLink.innerText = 'Create an account';
     }
 }
 
-toggleLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    setMode(mode === 'login' ? 'signup' : 'login');
+// Tab click listeners
+tabStudent.addEventListener('click', () => {
+    selectedRole = 'student';
+    updateUI();
 });
 
-// Demo autofill buttons
-const btnStudent = document.getElementById('btnFillStudent');
-if (btnStudent) {
-    btnStudent.addEventListener('click', () => {
-        setMode('login');
-        document.getElementById('email').value = 'student@resumeradar.com';
-        document.getElementById('password').value = 'Password123!';
+tabMentor.addEventListener('click', () => {
+    selectedRole = 'mentor';
+    updateUI();
+});
+
+// Toggle login / signup mode
+toggleLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    mode = (mode === 'login') ? 'signup' : 'login';
+    updateUI();
+});
+
+// Quick demo sign-in button
+if (btnQuickDemo) {
+    btnQuickDemo.addEventListener('click', () => {
+        const demoEmail = selectedRole === 'student' ? 'student@resumeradar.com' : 'mentor@resumeradar.com';
+        const users = getUsers();
+        const demoUser = users[demoEmail];
+
+        emailInput.value = demoEmail;
+        passwordInput.value = 'Password123!';
+
+        // Direct login
+        const sessionData = {
+            email: demoEmail,
+            name: demoUser.name,
+            role: demoUser.role
+        };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+        showAlert(`Signing in as ${demoUser.name}...`, 'info');
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 300);
     });
 }
 
-const btnMentor = document.getElementById('btnFillMentor');
-if (btnMentor) {
-    btnMentor.addEventListener('click', () => {
-        setMode('login');
-        document.getElementById('email').value = 'mentor@resumeradar.com';
-        document.getElementById('password').value = 'Password123!';
-    });
-}
-
+// Form Submission
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    const fullName = document.getElementById('fullName').value.trim();
-    const role = roleSelect ? roleSelect.value : 'student';
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    const fullName = fullNameInput ? fullNameInput.value.trim() : '';
 
     if (password.length < 6) {
         showAlert('Password must be at least 6 characters.', 'warning');
@@ -123,27 +178,37 @@ form.addEventListener('submit', async (e) => {
 
     if (mode === 'signup') {
         if (users[email]) {
-            showAlert('This email is already registered. Please login.', 'warning');
+            showAlert('This email is already registered. Please login with your password.', 'warning');
+            mode = 'login';
+            updateUI();
             return;
         }
 
-        // Save new user account
+        // Save new user account with chosen role
         users[email] = {
             name: fullName || email.split('@')[0],
-            role: role || 'student',
+            role: selectedRole,
             passwordHash: passwordHash
         };
         localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
-        // Switch to login form with success message (do NOT auto-login)
-        setMode('login');
-        document.getElementById('password').value = '';
-        showAlert('Account created successfully! Please login with your password.', 'success');
+        // Switch to login view (do NOT auto-login)
+        mode = 'login';
+        passwordInput.value = '';
+        updateUI();
+        showAlert('Account created successfully! Please enter your password to login.', 'success');
+
     } else {
         // Login mode
         const user = users[email];
-        if (!user || user.passwordHash !== passwordHash) {
-            showAlert('Invalid email or password. New user? Click "Create an account" below.', 'danger');
+
+        if (!user) {
+            showAlert('No account found with this email. Click "Create an account" below to sign up.', 'warning');
+            return;
+        }
+
+        if (user.passwordHash !== passwordHash) {
+            showAlert('Incorrect password. Please verify and try again.', 'danger');
             return;
         }
 
@@ -151,11 +216,16 @@ form.addEventListener('submit', async (e) => {
         const sessionData = {
             email: email,
             name: user.name || email.split('@')[0],
-            role: user.role || 'student'
+            role: user.role || selectedRole
         };
         localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
 
-        // Go to dashboard
-        window.location.href = '/';
+        showAlert(`Welcome back, ${user.name}! Redirecting to dashboard...`, 'success');
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 300);
     }
 });
+
+// Initial UI setup
+updateUI();
